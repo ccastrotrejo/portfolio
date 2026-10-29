@@ -11,11 +11,26 @@ const cables: Seg[] = []
 const detail: Seg[] = []
 
 const add = (arr: Seg[], a: V, b: V) => arr.push([a, b])
+
 const lerp = (a: V, b: V, t: number): V => [
   a[0] + (b[0] - a[0]) * t,
   a[1] + (b[1] - a[1]) * t,
   a[2] + (b[2] - a[2]) * t,
 ]
+/** A rope between two points, sagging under its own weight (shallow parabola). */
+const rope = (a: V, b: V, sagRatio = 0.006, n = 10) => {
+  const span = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+  const sag = span * sagRatio
+  let prev = a
+  for (let i = 1; i <= n; i++) {
+    const t = i / n
+    const p = lerp(a, b, t)
+    const q: V = [p[0], p[1] - 4 * sag * t * (1 - t), p[2]]
+    add(cables, prev, q)
+    prev = q
+  }
+}
+
 const plus = (p: V, ...vs: [V, number][]): V =>
   vs.reduce<V>((acc, [v, k]) => [acc[0] + v[0] * k, acc[1] + v[1] * k, acc[2] + v[2] * k], p)
 
@@ -43,6 +58,12 @@ box(chords, -2.8, 2.8, -1.2, 0, -2.8, 2.8)
 for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
   box(detail, x * 1.2 - 0.3, x * 1.2 + 0.3, 0, 0.25, z * 1.2 - 0.3, z * 1.2 + 0.3)
 }
+
+/* ---------- Ground ---------- */
+const ground: Seg[] = []
+// Contact shadow cast away from a light at upper left: short hatching beside the footing.
+for (let z = -2.6; z <= 2.6; z += 0.4) add(ground, [2.9, -1.2, z], [2.9 + 1.6 - Math.abs(z) * 0.35, -1.2, z - 0.5])
+add(ground, [-3.4, -1.2, 2.8], [4.2, -1.2, 2.8])
 
 /* ---------- Mast ---------- */
 const S = 1.2
@@ -315,7 +336,7 @@ for (let x = 1.55; x < CJ; x += 0.5) add(detail, [x, PLAT + 0.02, -0.9], [x, PLA
   box(chords, cx - 0.5, cx + 0.5, PLAT + 0.2, PLAT + 1.1, 0.35, 0.85)
   for (let x = cx - 0.4; x < cx + 0.5; x += 0.1) add(detail, [x, PLAT + 0.3, 0.85], [x, PLAT + 1.0, 0.85])
   // Hoist rope leaves the drum toward the tower head
-  add(cables, [cx - r * 0.6, cy + r * 0.8, -0.25], [0.1, PEAK[1] + 0.2, -0.05])
+  rope([cx - r * 0.6, cy + r * 0.8, -0.25], [0.1, PEAK[1] + 0.2, -0.05], 0.01)
 }
 
 // Electrical cabinet
@@ -344,13 +365,13 @@ const PEND_A = jib[13].T
 const PEND_B = jib[JP].T
 const SPREADER = lerp(PEAK, PEND_A, 0.22)
 box(chords, SPREADER[0] - 0.25, SPREADER[0] + 0.25, SPREADER[1] - 0.2, SPREADER[1] + 0.2, -0.4, 0.4)
-for (const dz of [-0.24, -0.08, 0.08, 0.24]) add(cables, plus(PEAK, [LAT, dz]), plus(SPREADER, [LAT, dz]))
+for (const dz of [-0.24, -0.08, 0.08, 0.24]) rope(plus(PEAK, [LAT, dz]), plus(SPREADER, [LAT, dz]), 0.004)
 for (const dz of [-0.14, 0.14]) {
-  add(cables, plus(SPREADER, [LAT, dz]), plus(PEND_A, [LAT, dz]))
-  add(cables, plus(SPREADER, [LAT, dz]), plus(PEND_B, [LAT, dz]))
-  add(cables, plus(PEAK, [LAT, dz]), [CJ, PLAT + 1.1, dz * 6])
+  rope(plus(SPREADER, [LAT, dz]), plus(PEND_A, [LAT, dz]))
+  rope(plus(SPREADER, [LAT, dz]), plus(PEND_B, [LAT, dz]))
+  rope(plus(PEAK, [LAT, dz]), [CJ, PLAT + 1.1, dz * 6], 0.008)
 }
-add(cables, [0, PEAK[1] + 0.2, 0], TIP)
+rope([0, PEAK[1] + 0.2, 0], TIP, 0.012)
 
 /* ---------- Hook block ---------- */
 const HOOK_Y = 44
@@ -400,45 +421,89 @@ for (const dz of [-0.27, -0.09, 0.09, 0.27]) {
   add(lacing, inner[inner.length - 1], point)
   add(detail, [cx + 0.26, HOOK_Y - 0.55, 0], plus(point, [[0.06, -0.04, 0], 1]))
 }
-/* ---------- Projection ---------- */
+/* ---------- Projection ----------
+ * Two-point perspective with corrected verticals (the shift-lens convention of
+ * architectural illustration): horizontals recede to vanishing points, but
+ * plumb lines stay plumb so the hoist rope reads as hanging under gravity.
+ */
 const YAW = (34 * Math.PI) / 180
-const CAM_Y = 6
-const DIST = 80
+const PITCH = 0
+const EYE = 1.7
+const DIST = 66
 
-const project = ([x, y, z]: V): [number, number] => {
+type Cam = { x: number; y: number; depth: number }
+
+const camera = ([x, y, z]: V): Cam => {
   const xr = x * Math.cos(YAW) - z * Math.sin(YAW)
-  const zr = x * Math.sin(YAW) + z * Math.cos(YAW)
-  const depth = zr + DIST
-  return [(xr / depth) * 100, (-(y - CAM_Y) / depth) * 100]
+  const zr = x * Math.sin(YAW) + z * Math.cos(YAW) + DIST
+  const yc = y - EYE
+  const yp = yc * Math.cos(PITCH) - zr * Math.sin(PITCH)
+  const depth = yc * Math.sin(PITCH) + zr * Math.cos(PITCH)
+  return { x: (xr / depth) * 100, y: (-yp / depth) * 100, depth }
 }
 
-const all = [...chords, ...lacing, ...cables, ...detail].flatMap(([a, b]) => [project(a), project(b)])
-const minX = Math.min(...all.map((p) => p[0]))
-const maxX = Math.max(...all.map((p) => p[0]))
-const minY = Math.min(...all.map((p) => p[1]))
-const maxY = Math.max(...all.map((p) => p[1]))
+type Kind = 'chords' | 'lacing' | 'cables' | 'detail' | 'ground'
+const groups: [Kind, Seg[]][] = [
+  ['chords', chords],
+  ['lacing', lacing],
+  ['cables', cables],
+  ['detail', detail],
+  ['ground', ground],
+]
+
+const projected = groups.flatMap(([kind, segs]) =>
+  segs.map(([a, b]) => {
+    const pa = camera(a)
+    const pb = camera(b)
+    return { kind, pa, pb, depth: (pa.depth + pb.depth) / 2 }
+  }),
+)
+
+const pts = projected.flatMap((s) => [s.pa, s.pb])
+const minX = Math.min(...pts.map((p) => p.x))
+const maxX = Math.max(...pts.map((p) => p.x))
+const minY = Math.min(...pts.map((p) => p.y))
+const maxY = Math.max(...pts.map((p) => p.y))
 const VB_H = 600
 const scale = VB_H / (maxY - minY)
 const VB_W = Math.ceil((maxX - minX) * scale)
 
-const toPath = (segs: Seg[]) =>
-  segs
-    .map(([a, b]) => {
-      const [ax, ay] = project(a)
-      const [bx, by] = project(b)
-      const f = (n: number) => n.toFixed(1)
-      return `M${f((ax - minX) * scale)} ${f((ay - minY) * scale)}L${f((bx - minX) * scale)} ${f((by - minY) * scale)}`
-    })
-    .join('')
+// Depth steps for atmospheric perspective: 0 = farthest, STEPS - 1 = nearest.
+// Many small steps read as a continuous fade instead of visible jumps.
+export const STEPS = 8
+const structDepths = projected.filter((s) => s.kind !== 'ground').map((s) => s.depth)
+const nearD = Math.min(...structDepths)
+const farD = Math.max(...structDepths)
+const step = (d: number) => {
+  const t = (farD - d) / (farD - nearD)
+  return Math.min(STEPS - 1, Math.max(0, Math.floor(t * STEPS)))
+}
 
-/** Projected crane drawing: viewBox size plus one path per stroke weight. */
+const f = (n: number) => n.toFixed(1)
+const seg = (a: Cam, b: Cam) =>
+  `M${f((a.x - minX) * scale)} ${f((a.y - minY) * scale)}L${f((b.x - minX) * scale)} ${f((b.y - minY) * scale)}`
+
+const kinds: Kind[] = ['ground', 'detail', 'lacing', 'cables', 'chords']
+
+/** Path data per depth step (far → near) and per line kind. */
+const layers = Array.from({ length: STEPS }, (_, i) => {
+  const inStep = projected.filter((s) => (s.kind === 'ground' ? i === STEPS - 1 : step(s.depth) === i))
+  const paths = Object.fromEntries(
+    kinds.map((k) => [
+      k,
+      inStep
+        // Detail reduction: the finest parts on the far side are left out.
+        .filter((s) => s.kind === k && !(k === 'detail' && i < 2))
+        .map((s) => seg(s.pa, s.pb))
+        .join(''),
+    ]),
+  ) as Record<Kind, string>
+  return { step: i, paths }
+})
+
+/** Projected crane drawing: viewBox size plus path data layered far → near. */
 export const towerCrane = {
   width: VB_W,
   height: VB_H,
-  paths: {
-    detail: toPath(detail),
-    lacing: toPath(lacing),
-    chords: toPath(chords),
-    cables: toPath(cables),
-  },
+  layers,
 }

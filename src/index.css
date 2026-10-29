@@ -150,3 +150,7 @@ body {
   color: var(--color-text-muted);
   text-wrap: pretty;
 }
+
+.tower-crane__halo {
+  stroke: var(--color-bg);
+}
