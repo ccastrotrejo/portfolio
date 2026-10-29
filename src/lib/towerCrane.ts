@@ -18,8 +18,10 @@ const lerp = (a: V, b: V, t: number): V => [
   a[2] + (b[2] - a[2]) * t,
 ]
 /** A rope between two points, sagging under its own weight (shallow parabola). */
-const rope = (a: V, b: V, sagRatio = 0.006, n = 10) => {
-  const span = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2])
+const rope = (a: V, end: V, sagRatio = 0.006, n = 10, gap = 0) => {
+  const full = Math.hypot(end[0] - a[0], end[1] - a[1], end[2] - a[2])
+  const b = lerp(a, end, 1 - gap / full)
+  const span = full - gap
   const sag = span * sagRatio
   let prev = a
   for (let i = 1; i <= n; i++) {
@@ -33,6 +35,55 @@ const rope = (a: V, b: V, sagRatio = 0.006, n = 10) => {
 
 const plus = (p: V, ...vs: [V, number][]): V =>
   vs.reduce<V>((acc, [v, k]) => [acc[0] + v[0] * k, acc[1] + v[1] * k, acc[2] + v[2] * k], p)
+
+/* Camera, shared by face culling below and the projection at the bottom. */
+const YAW = (34 * Math.PI) / 180
+const PITCH = 0
+const EYE = 1.7
+const DIST = 66
+const CAM: V = [-DIST * Math.sin(YAW), EYE, -DIST * Math.cos(YAW)]
+
+type Face = 'left' | 'right' | 'bottom' | 'top' | 'back' | 'front'
+
+/**
+ * A closed solid drawn with hidden lines removed: only edges of faces turned
+ * toward the camera. Lattice stays see-through (box); plate and casting don't.
+ */
+function solidBox(
+  arr: Seg[],
+  x0: number,
+  x1: number,
+  y0: number,
+  y1: number,
+  z0: number,
+  z1: number,
+  hide: Face[] = [],
+) {
+  const c = (i: number): V => [i & 1 ? x1 : x0, i & 2 ? y1 : y0, i & 4 ? z1 : z0]
+  const mid: V = [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]
+  const faces: [Face, V, number[]][] = [
+    ['left', [-1, 0, 0], [0, 2, 6, 4]],
+    ['right', [1, 0, 0], [1, 3, 7, 5]],
+    ['bottom', [0, -1, 0], [0, 1, 5, 4]],
+    ['top', [0, 1, 0], [2, 3, 7, 6]],
+    ['back', [0, 0, -1], [0, 1, 3, 2]],
+    ['front', [0, 0, 1], [4, 5, 7, 6]],
+  ]
+  const seen = new Set<string>()
+  for (const [name, n, idx] of faces) {
+    if (hide.includes(name)) continue
+    const facing = n[0] * (CAM[0] - mid[0]) + n[1] * (CAM[1] - mid[1]) + n[2] * (CAM[2] - mid[2])
+    if (facing <= 0) continue
+    for (let k = 0; k < 4; k++) {
+      const a = idx[k]
+      const b = idx[(k + 1) % 4]
+      const key = a < b ? `${a}-${b}` : `${b}-${a}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      add(arr, c(a), c(b))
+    }
+  }
+}
 
 function box(arr: Seg[], x0: number, x1: number, y0: number, y1: number, z0: number, z1: number) {
   const c = (x: number, y: number, z: number): V => [x, y, z]
@@ -54,7 +105,7 @@ function ring(arr: Seg[], cx: number, y: number, cz: number, r: number, n = 28) 
 }
 
 /* ---------- Foundation ---------- */
-box(chords, -2.8, 2.8, -1.2, 0, -2.8, 2.8)
+solidBox(chords, -2.8, 2.8, -1.2, 0, -2.8, 2.8)
 for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
   box(detail, x * 1.2 - 0.3, x * 1.2 + 0.3, 0, 0.25, z * 1.2 - 0.3, z * 1.2 + 0.3)
 }
@@ -130,38 +181,26 @@ for (let i = 0; i < 48; i++) {
   add(detail, [Math.cos(a) * r1, TOP + 0.1, Math.sin(a) * r1], [Math.cos(a) * r1, TOP + 0.3, Math.sin(a) * r1])
 }
 const PLAT = TOP + 2.4
-box(chords, -1.3, 1.3, TOP + 0.4, PLAT, -1.3, 1.3)
-add(lacing, [-1.3, TOP + 0.4, 1.3], [1.3, PLAT, 1.3])
-add(lacing, [1.3, TOP + 0.4, -1.3], [1.3, PLAT, 1.3])
-add(lacing, [1.3, TOP + 0.4, 1.3], [-1.3, PLAT, 1.3])
+solidBox(chords, -1.3, 1.3, TOP + 0.4, PLAT, -1.3, 1.3)
+for (let x = -0.9; x < 1.3; x += 0.4) add(detail, [x, TOP + 0.6, -1.3], [x, PLAT - 0.2, -1.3])
 
 /* ---------- Operator cab ---------- */
 const CAB = { x0: 1.3, x1: 2.9, y0: TOP + 0.6, y1: TOP + 2.6, z0: 0.1, z1: 1.7 }
-box(chords, CAB.x0, CAB.x1, CAB.y0, CAB.y1, CAB.z0, CAB.z1)
-box(lacing, CAB.x0 - 0.05, CAB.x1 + 0.1, CAB.y1, CAB.y1 + 0.15, CAB.z0 - 0.05, CAB.z1 + 0.1)
+solidBox(chords, CAB.x0, CAB.x1, CAB.y0, CAB.y1, CAB.z0, CAB.z1)
+solidBox(lacing, CAB.x0 - 0.05, CAB.x1 + 0.1, CAB.y1, CAB.y1 + 0.15, CAB.z0 - 0.1, CAB.z1 + 0.05, ['bottom'])
 {
-  // Front (z = z1) and side (x = x1) glazing with mullions
+  // Glazing with a mullion and a single glare stroke, on the visible face
   const wy0 = CAB.y0 + 0.45
   const wy1 = CAB.y1 - 0.2
   const fx0 = CAB.x0 + 0.15
   const fx1 = CAB.x1 - 0.15
-  const fz = CAB.z1
+  const fz = CAB.z0
   add(lacing, [fx0, wy0, fz], [fx1, wy0, fz])
   add(lacing, [fx1, wy0, fz], [fx1, wy1, fz])
   add(lacing, [fx1, wy1, fz], [fx0, wy1, fz])
   add(lacing, [fx0, wy1, fz], [fx0, wy0, fz])
   add(detail, [(fx0 + fx1) / 2, wy0, fz], [(fx0 + fx1) / 2, wy1, fz])
-  const sz0 = CAB.z0 + 0.15
-  const sz1 = CAB.z1 - 0.15
-  const sx = CAB.x1
-  add(lacing, [sx, wy0, sz0], [sx, wy0, sz1])
-  add(lacing, [sx, wy0, sz1], [sx, wy1, sz1])
-  add(lacing, [sx, wy1, sz1], [sx, wy1, sz0])
-  add(lacing, [sx, wy1, sz0], [sx, wy0, sz0])
-  add(detail, [sx, wy0, (sz0 + sz1) / 2], [sx, wy1, (sz0 + sz1) / 2])
-  // Glare strokes
   add(detail, [fx0 + 0.15, wy1 - 0.15, fz], [fx0 + 0.45, wy1 - 0.55, fz])
-  add(detail, [sx, wy1 - 0.15, sz0 + 0.15], [sx, wy1 - 0.5, sz0 + 0.5])
 }
 
 /* ---------- Tower head (A-frame) ---------- */
@@ -262,30 +301,24 @@ for (const z of [-0.35, 0.35]) {
   }
 }
 
-// Sheaves at the jib head
-const TIP = plus(ROOT, [U, LEN + 0.6], [W, 0.2])
-for (const z of [-0.35, 0.35]) {
-  const n = 16
+// Jib-head sheave. Only the near one is drawn: the far sheave sits directly
+// behind it, and drawing both reads as two overlapping coins.
+const TIP = plus(ROOT, [U, LEN + 0.45], [W, 0.15])
+const SHEAVE_R = 0.42
+{
+  const z = -0.3
+  const n = 20
   const p = (ang: number, r: number) => plus(TIP, [U, Math.cos(ang) * r], [W, Math.sin(ang) * r], [LAT, z])
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2
     const b = ((i + 1) / n) * Math.PI * 2
-    add(chords, p(a, 0.6), p(b, 0.6))
-    add(detail, p(a, 0.15), p(b, 0.15))
-  }
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2
-    add(detail, p(a, 0.15), p(a, 0.55))
+    add(lacing, p(a, SHEAVE_R), p(b, SHEAVE_R))
+    add(detail, p(a, SHEAVE_R - 0.08), p(b, SHEAVE_R - 0.08))
+    add(detail, p(a, 0.09), p(b, 0.09))
   }
 }
-add(lacing, tip.L, plus(TIP, [LAT, -0.35]))
-add(lacing, tip.R, plus(TIP, [LAT, 0.35]))
-add(lacing, tip.T, plus(TIP, [W, 0.6]))
-{
-  const light = plus(tip.T, [W, 0.7])
-  add(lacing, tip.T, light)
-  ring(detail, light[0], light[1] + 0.1, light[2], 0.12, 10)
-}
+add(lacing, tip.L, plus(TIP, [LAT, -0.3]))
+add(lacing, tip.T, plus(TIP, [W, SHEAVE_R]))
 
 /* ---------- Counter-jib ---------- */
 const CJ = 12
@@ -333,17 +366,17 @@ for (let x = 1.55; x < CJ; x += 0.5) add(detail, [x, PLAT + 0.02, -0.9], [x, PLA
       add(detail, [cx + Math.cos(a) * r, cy + Math.sin(a) * r, z], [cx + Math.cos(b) * r, cy + Math.sin(b) * r, z + 0.1 / n])
     }
   }
-  box(chords, cx - 0.5, cx + 0.5, PLAT + 0.2, PLAT + 1.1, 0.35, 0.85)
-  for (let x = cx - 0.4; x < cx + 0.5; x += 0.1) add(detail, [x, PLAT + 0.3, 0.85], [x, PLAT + 1.0, 0.85])
+  solidBox(chords, cx - 0.5, cx + 0.5, PLAT + 0.2, PLAT + 1.1, 0.35, 0.85)
+  for (let x = cx - 0.4; x < cx + 0.5; x += 0.1) add(detail, [x, PLAT + 0.3, 0.35], [x, PLAT + 1.0, 0.35])
   // Hoist rope leaves the drum toward the tower head
   rope([cx - r * 0.6, cy + r * 0.8, -0.25], [0.1, PEAK[1] + 0.2, -0.05], 0.01)
 }
 
 // Electrical cabinet
-box(chords, 6.1, 7.1, PLAT, PLAT + 1.6, -0.85, -0.25)
-add(lacing, [6.6, PLAT + 0.05, -0.25], [6.6, PLAT + 1.55, -0.25])
-for (let y = PLAT + 1.2; y < PLAT + 1.5; y += 0.08) add(detail, [6.2, y, -0.25], [6.5, y, -0.25])
-add(detail, [6.5, PLAT + 0.8, -0.25], [6.5, PLAT + 0.95, -0.25])
+solidBox(chords, 6.1, 7.1, PLAT, PLAT + 1.6, -0.85, -0.25)
+add(lacing, [6.6, PLAT + 0.05, -0.85], [6.6, PLAT + 1.55, -0.85])
+for (let y = PLAT + 1.2; y < PLAT + 1.5; y += 0.08) add(detail, [6.2, y, -0.85], [6.5, y, -0.85])
+add(detail, [6.5, PLAT + 0.8, -0.85], [6.5, PLAT + 0.95, -0.85])
 
 /* ---------- Counterweight stack ---------- */
 const CW0 = 9
@@ -352,8 +385,8 @@ const SLAB = 0.75
 for (let i = 0; i < 5; i++) {
   const y1 = PLAT - 0.6 - i * SLAB
   const y0 = y1 - SLAB + 0.06
-  box(i === 0 || i === 4 ? chords : lacing, CW0, CW1, y0, y1, -1.1, 1.1)
-  for (const x of [CW0 + 0.6, CW1 - 0.6]) add(detail, [x, y0 + 0.15, 1.1], [x, y1 - 0.15, 1.1])
+  solidBox(i === 0 || i === 4 ? chords : lacing, CW0, CW1, y0, y1, -1.1, 1.1, i < 4 ? ['bottom'] : [])
+  for (const x of [CW0 + 0.6, CW1 - 0.6]) add(detail, [x, y0 + 0.15, -1.1], [x, y1 - 0.15, -1.1])
 }
 for (const x of [CW0 + 0.3, CW1 - 0.3]) {
   add(chords, [x, PLAT - 0.6, 0], [x, PLAT, 0.6])
@@ -364,72 +397,67 @@ for (const x of [CW0 + 0.3, CW1 - 0.3]) {
 const PEND_A = jib[13].T
 const PEND_B = jib[JP].T
 const SPREADER = lerp(PEAK, PEND_A, 0.22)
-box(chords, SPREADER[0] - 0.25, SPREADER[0] + 0.25, SPREADER[1] - 0.2, SPREADER[1] + 0.2, -0.4, 0.4)
+solidBox(lacing, SPREADER[0] - 0.25, SPREADER[0] + 0.25, SPREADER[1] - 0.2, SPREADER[1] + 0.2, -0.4, 0.4)
 for (const dz of [-0.24, -0.08, 0.08, 0.24]) rope(plus(PEAK, [LAT, dz]), plus(SPREADER, [LAT, dz]), 0.004)
 for (const dz of [-0.14, 0.14]) {
   rope(plus(SPREADER, [LAT, dz]), plus(PEND_A, [LAT, dz]))
-  rope(plus(SPREADER, [LAT, dz]), plus(PEND_B, [LAT, dz]))
+  rope(plus(SPREADER, [LAT, dz]), plus(PEND_B, [LAT, dz]), 0.006, 10, 0.5)
   rope(plus(PEAK, [LAT, dz]), [CJ, PLAT + 1.1, dz * 6], 0.008)
 }
-rope([0, PEAK[1] + 0.2, 0], TIP, 0.012)
+rope([0, PEAK[1] + 0.2, 0], plus(TIP, [W, SHEAVE_R]), 0.012, 10, 0.35)
 
 /* ---------- Hook block ---------- */
 const HOOK_Y = 44
 const hookX = TIP[0]
-const hookZ = 0
-for (const dz of [-0.27, -0.09, 0.09, 0.27]) {
-  add(cables, [hookX + (dz > 0 ? 0.05 : -0.05), TIP[1] - 0.6, hookZ + dz], [hookX, HOOK_Y + 1.7, hookZ + dz])
+// Two falls, spaced so they read as reeved rope rather than one heavy bar.
+for (const dx of [-SHEAVE_R + 0.06, SHEAVE_R - 0.06]) {
+  add(cables, [TIP[0] + dx, TIP[1], -0.3], [hookX + dx * 0.55, HOOK_Y + 1.8, -0.3])
 }
 {
-  const bx0 = hookX - 0.5
-  const bx1 = hookX + 0.5
-  box(chords, bx0, bx1, HOOK_Y, HOOK_Y + 1.7, -0.35, 0.35)
-  box(lacing, bx0 - 0.05, bx1 + 0.05, HOOK_Y + 1.55, HOOK_Y + 1.8, -0.4, 0.4)
-  const cy = HOOK_Y + 1.05
+  // Small parts stay fine-lined however near they are, so the eye goes to the structure.
+  const bx0 = hookX - 0.45
+  const bx1 = hookX + 0.45
+  solidBox(lacing, bx0, bx1, HOOK_Y, HOOK_Y + 1.6, -0.32, 0.32)
+  solidBox(lacing, bx0 - 0.05, bx1 + 0.05, HOOK_Y + 1.6, HOOK_Y + 1.8, -0.36, 0.36)
+  const cy = HOOK_Y + 0.95
   const n = 16
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2
     const b = ((i + 1) / n) * Math.PI * 2
-    add(lacing, [hookX + Math.cos(a) * 0.38, cy + Math.sin(a) * 0.38, 0.35], [hookX + Math.cos(b) * 0.38, cy + Math.sin(b) * 0.38, 0.35])
-    add(detail, [hookX + Math.cos(a) * 0.1, cy + Math.sin(a) * 0.1, 0.35], [hookX + Math.cos(b) * 0.1, cy + Math.sin(b) * 0.1, 0.35])
+    add(detail, [hookX + Math.cos(a) * 0.3, cy + Math.sin(a) * 0.3, -0.32], [hookX + Math.cos(b) * 0.3, cy + Math.sin(b) * 0.3, -0.32])
+    add(detail, [hookX + Math.cos(a) * 0.08, cy + Math.sin(a) * 0.08, -0.32], [hookX + Math.cos(b) * 0.08, cy + Math.sin(b) * 0.08, -0.32])
   }
-  for (const [dx, dy] of [[-0.35, 0.2], [0.35, 0.2], [-0.35, 1.5], [0.35, 1.5]]) ring(detail, hookX + dx, HOOK_Y + dy, 0.35, 0.05, 6)
-  box(chords, hookX - 0.18, hookX + 0.18, HOOK_Y - 0.35, HOOK_Y, -0.18, 0.18)
+  solidBox(detail, hookX - 0.14, hookX + 0.14, HOOK_Y - 0.3, HOOK_Y, -0.14, 0.14)
 }
 {
-  // Hook: shank, bowl, point, and safety latch
-  const cx = hookX - 0.32
-  const cy = HOOK_Y - 1.2
-  const arc = (r: number) => {
-    const pts: V[] = []
-    for (let i = 0; i <= 20; i++) {
-      const a = -(i / 20) * ((205 * Math.PI) / 180)
-      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0])
-    }
-    return pts
+  // Hook: tapered bowl (thick at the back, thin at the point) with a safety latch
+  const cx = hookX - 0.26
+  const cy = HOOK_Y - 1.05
+  const SWEEP = (215 * Math.PI) / 180
+  const outer: V[] = []
+  const inner: V[] = []
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24
+    const a = -t * SWEEP
+    const thick = 0.24 * (1 - 0.75 * t)
+    outer.push([cx + Math.cos(a) * (0.22 + thick), cy + Math.sin(a) * (0.22 + thick), 0])
+    inner.push([cx + Math.cos(a) * 0.22, cy + Math.sin(a) * 0.22, 0])
   }
-  const outer = arc(0.52)
-  const inner = arc(0.26)
   for (let i = 0; i < outer.length - 1; i++) {
-    add(chords, outer[i], outer[i + 1])
-    add(lacing, inner[i], inner[i + 1])
+    add(lacing, outer[i], outer[i + 1])
+    add(detail, inner[i], inner[i + 1])
   }
-  add(chords, [cx + 0.52, HOOK_Y - 0.35, 0], outer[0])
-  add(lacing, [cx + 0.26, HOOK_Y - 0.35, 0], inner[0])
-  const point: V = [cx - 0.42, cy + 0.42, 0]
-  add(chords, outer[outer.length - 1], point)
-  add(lacing, inner[inner.length - 1], point)
-  add(detail, [cx + 0.26, HOOK_Y - 0.55, 0], plus(point, [[0.06, -0.04, 0], 1]))
+  add(lacing, [hookX + 0.1, HOOK_Y - 0.3, 0], outer[0])
+  add(detail, [hookX - 0.04, HOOK_Y - 0.3, 0], inner[0])
+  add(lacing, outer[outer.length - 1], inner[inner.length - 1])
+  add(detail, [hookX - 0.04, HOOK_Y - 0.5, 0], inner[inner.length - 1])
 }
+
 /* ---------- Projection ----------
  * Two-point perspective with corrected verticals (the shift-lens convention of
  * architectural illustration): horizontals recede to vanishing points, but
  * plumb lines stay plumb so the hoist rope reads as hanging under gravity.
  */
-const YAW = (34 * Math.PI) / 180
-const PITCH = 0
-const EYE = 1.7
-const DIST = 66
 
 type Cam = { x: number; y: number; depth: number }
 
