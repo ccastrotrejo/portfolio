@@ -1,10 +1,8 @@
 import { DotField } from './components/DotField.tsx'
+import { LocalTime } from './components/LocalTime.tsx'
 import { bio, ext, links, person, projects, work } from './content.tsx'
-import { useLocalTime } from './hooks/useLocalTime.ts'
 
 export function App() {
-  const time = useLocalTime(person.timeZone)
-
   return (
     <div className="site">
       <DotField />
@@ -76,7 +74,7 @@ export function App() {
               </span>
             ))}
           </p>
-          <p className="site__time">{time && `${time} in ${person.city}`}</p>
+          <LocalTime timeZone={person.timeZone} city={person.city} />
         </footer>
       </main>
     </div>

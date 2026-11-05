@@ -38,7 +38,7 @@ export function usePointerSpot(
     }
     const onLeave = () => fieldEl.removeAttribute('data-pointer')
 
-    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('scroll', schedule, { passive: true })
     document.documentElement.addEventListener('pointerleave', onLeave)
     return () => {
