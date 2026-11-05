@@ -107,7 +107,7 @@ export const projects: Project[] = [
 ]
 
 export const links = [
-  { label: 'GitHub', href: person.github },
-  { label: 'LinkedIn', href: person.linkedin },
-  { label: 'Email', href: `mailto:${person.email}` },
+  { label: 'GitHub', href: person.github, external: true },
+  { label: 'LinkedIn', href: person.linkedin, external: true },
+  { label: 'Email', href: `mailto:${person.email}`, external: false },
 ]

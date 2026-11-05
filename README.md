@@ -13,4 +13,5 @@ bun install
 bun run dev      # start dev server
 bun run build    # type-check, build, and prerender the page to static HTML
 bun run lint     # lint with oxlint
+bun run test     # run the Vitest suite
 ```

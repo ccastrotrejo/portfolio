@@ -28,7 +28,7 @@ export function App() {
           </h2>
           <ul className="site__list">
             {work.map((r) => (
-              <li key={r.title} className="site__row">
+              <li key={`${r.company}-${r.period}`} className="site__row">
                 <div>
                   <p className="site__row-title">
                     {r.company} <span className="site__row-sub">— {r.title}</span>
@@ -70,16 +70,13 @@ export function App() {
             {links.map((l, i) => (
               <span key={l.label}>
                 {i > 0 && ' · '}
-                <a href={l.href} {...(l.href.startsWith('mailto:') ? {} : ext)}>
+                <a href={l.href} {...(l.external ? ext : {})}>
                   {l.label}
                 </a>
               </span>
             ))}
           </p>
-          {/* Prerendered at build time, so the minute differs on hydration. */}
-          <p className="site__time" suppressHydrationWarning>
-            {time} in {person.city}
-          </p>
+          <p className="site__time">{time && `${time} in ${person.city}`}</p>
         </footer>
       </main>
     </div>
