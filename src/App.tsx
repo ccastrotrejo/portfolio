@@ -1,42 +1,82 @@
-import { CuttingMat } from './components/CuttingMat.tsx'
-import { TOWER_CRANE_ASPECT, TowerCrane } from './components/TowerCrane.tsx'
-import { useMatField } from './hooks/useMatField.ts'
+import { DotField } from './components/DotField.tsx'
+import { ExternalLink } from './components/ExternalLink.tsx'
+import { LocalTime } from './components/LocalTime.tsx'
+import { bio, links, person, projects, work } from './content.tsx'
 
 export function App() {
-  const { w, h, fw, fh, x0, x1, y0, y1 } = useMatField()
-  const narrow = w < 640
-  const left = Math.max(x0 + 40, Math.round(w * 0.08))
-  const right = Math.max(w - x1 + 24, Math.round(w * 0.06))
-
-  // On narrow screens the copy sits up top, so the crane gets what's left below it.
-  const maxH = narrow ? fh - 360 : fh * 0.92
-  const craneW = Math.round(Math.min(maxH * TOWER_CRANE_ASPECT, fw * (narrow ? 0.85 : 0.62)))
-  const craneH = Math.round(craneW / TOWER_CRANE_ASPECT)
-
   return (
-    <main className="site">
-      <CuttingMat caption={!narrow} />
-      <TowerCrane
-        className="site__crane"
-        style={{ width: craneW, height: craneH, right, bottom: h - y1 }}
-      />
-      <header className="site__id" style={{ left, top: y0 + 40 }}>
-        <p className="site__name">Carlos Castro</p>
-        <p className="site__role">Software Engineer</p>
-      </header>
-      <div
-        className="site__copy"
-        style={narrow ? { left, right, top: y0 + 112 } : { left, bottom: h - y1 + 96 }}
-      >
-        <h1 className="site__title">
-          We’re working
-          <br />
-          on it.
-        </h1>
-        <p className="site__lede">
-          A home for my projects, side builds, and experiments is on its way.
-        </p>
-      </div>
-    </main>
+    <div className="site">
+      <DotField />
+      <main className="site__page">
+        <header className="site__header">
+          <h1 className="site__name">{person.name}</h1>
+          <p className="site__meta">
+            {person.role} · {person.location}
+          </p>
+        </header>
+
+        <section className="site__bio" aria-label="About">
+          {bio.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </section>
+
+        <section aria-labelledby="work">
+          <h2 id="work" className="site__heading">
+            Work
+          </h2>
+          <ul className="site__list">
+            {work.map((r) => (
+              <li key={`${r.company}-${r.period}`} className="site__row">
+                <div>
+                  <p className="site__row-title">
+                    {r.company} <span className="site__row-sub">— {r.title}</span>
+                  </p>
+                  <p className="site__row-blurb">{r.summary}</p>
+                </div>
+                <span className="site__row-meta">{r.period}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="building">
+          <h2 id="building" className="site__heading">
+            Building
+          </h2>
+          <ul className="site__list site__list--links">
+            {projects.map((p) => (
+              <li key={p.name} className="site__row site__row--link">
+                <div>
+                  <p className="site__row-title">
+                    <ExternalLink className="site__row-link" href={p.href}>
+                      {p.name}
+                    </ExternalLink>
+                  </p>
+                  <p className="site__row-blurb">{p.blurb}</p>
+                </div>
+                <span className="site__row-meta">{p.kind}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <footer className="site__footer">
+          <p>
+            {links.map((l, i) => (
+              <span key={l.label}>
+                {i > 0 && ' · '}
+                {l.external ? (
+                  <ExternalLink href={l.href}>{l.label}</ExternalLink>
+                ) : (
+                  <a href={l.href}>{l.label}</a>
+                )}
+              </span>
+            ))}
+          </p>
+          <LocalTime timeZone={person.timeZone} city={person.city} />
+        </footer>
+      </main>
+    </div>
   )
 }
