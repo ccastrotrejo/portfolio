@@ -39,8 +39,23 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Every link below defines its own :active state instead. */
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ---------- Dot field ---------- */
@@ -180,8 +195,14 @@ body {
   transition: text-decoration-color 150ms ease;
 }
 
-.site a:hover {
+.site a:active {
   text-decoration-color: currentColor;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site a:hover {
+    text-decoration-color: currentColor;
+  }
 }
 
 .site a:focus-visible {
@@ -190,24 +211,13 @@ body {
   border-radius: 2px;
 }
 
-.site a.site__row:focus-visible {
-  border-radius: 6px;
-}
-
-/* Off-site text links get a quiet arrow; rows render their own. */
-.site a[target='_blank']:not(.site__row)::after {
+/* Off-site links get a quiet arrow. */
+.site a[target='_blank']::after {
   content: '\2197' / '';
   display: inline-block;
   margin-inline-start: 2px;
   color: var(--color-text-muted);
   font-size: 0.85em;
-}
-
-.site__arrow {
-  margin-inline-start: 4px;
-  color: var(--color-text-muted);
-  font-size: 0.85em;
-  font-weight: 400;
 }
 
 .site__heading {
@@ -224,6 +234,7 @@ body {
 }
 
 .site__row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
@@ -231,13 +242,38 @@ body {
   padding-block: 10px;
 }
 
-.site a.site__row {
+/* The title is the link; its overlay stretches the click area across the whole row. */
+.site a.site__row-link {
   text-decoration: none;
+}
+
+.site__row-link::before {
+  content: '';
+  position: absolute;
+  inset: 0 -8px;
+  border-radius: 6px;
+}
+
+.site a.site__row-link:focus-visible {
+  outline: none;
+}
+
+.site__row-link:focus-visible::before {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.site__row-link:active::before {
+  background: color-mix(in oklch, currentColor 5%, transparent);
 }
 
 .site__row-title {
   font-size: 16px;
   font-weight: 500;
+}
+
+.site a.site__row-link::after {
+  margin-inline-start: 4px;
 }
 
 .site__row-sub {

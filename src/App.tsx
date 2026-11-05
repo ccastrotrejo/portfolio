@@ -1,6 +1,7 @@
 import { DotField } from './components/DotField.tsx'
+import { ExternalLink } from './components/ExternalLink.tsx'
 import { LocalTime } from './components/LocalTime.tsx'
-import { bio, ext, links, person, projects, work } from './content.tsx'
+import { bio, links, person, projects, work } from './content.tsx'
 
 export function App() {
   return (
@@ -45,19 +46,16 @@ export function App() {
           </h2>
           <ul className="site__list site__list--links">
             {projects.map((p) => (
-              <li key={p.name}>
-                <a className="site__row site__row--link" href={p.href} {...ext}>
-                  <div>
-                    <p className="site__row-title">
+              <li key={p.name} className="site__row site__row--link">
+                <div>
+                  <p className="site__row-title">
+                    <ExternalLink className="site__row-link" href={p.href}>
                       {p.name}
-                      <span className="site__arrow" aria-hidden="true">
-                        ↗
-                      </span>
-                    </p>
-                    <p className="site__row-blurb">{p.blurb}</p>
-                  </div>
-                  <span className="site__row-meta">{p.kind}</span>
-                </a>
+                    </ExternalLink>
+                  </p>
+                  <p className="site__row-blurb">{p.blurb}</p>
+                </div>
+                <span className="site__row-meta">{p.kind}</span>
               </li>
             ))}
           </ul>
@@ -68,9 +66,11 @@ export function App() {
             {links.map((l, i) => (
               <span key={l.label}>
                 {i > 0 && ' · '}
-                <a href={l.href} {...(l.external ? ext : {})}>
-                  {l.label}
-                </a>
+                {l.external ? (
+                  <ExternalLink href={l.href}>{l.label}</ExternalLink>
+                ) : (
+                  <a href={l.href}>{l.label}</a>
+                )}
               </span>
             ))}
           </p>

@@ -22,7 +22,10 @@ describe('App', () => {
   it('opens every project in a new tab without leaking the opener', () => {
     render(<App />)
     for (const project of projects) {
-      const link = screen.getByRole('link', { name: new RegExp(project.name) })
+      // The title alone is the link, and screen readers hear that it opens a new tab.
+      const link = screen.getByRole('link', {
+        name: new RegExp(`^${project.name}\\s?\\(opens in new tab\\)$`),
+      })
       expect(link.getAttribute('href')).toBe(project.href)
       expect(link.getAttribute('target')).toBe('_blank')
       expect(link.getAttribute('rel')).toBe('noopener noreferrer')

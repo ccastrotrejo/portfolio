@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ExternalLink } from './components/ExternalLink.tsx'
 
 export const person = {
   name: 'Carlos Castro Trejo',
@@ -11,15 +12,10 @@ export const person = {
   linkedin: 'https://www.linkedin.com/in/carloscastrotrejo/',
 }
 
-/** Props for links that open off-site. */
-export const ext = { target: '_blank', rel: 'noopener noreferrer' } as const
-
 export const bio: ReactNode[] = [
   <>
     I’m a software engineer at Microsoft in Brooklyn and the founding frontend engineer on{' '}
-    <a href="https://auto.azure.com/" {...ext}>
-      Azure Logic Apps Automation
-    </a>
+    <ExternalLink href="https://auto.azure.com/">Azure Logic Apps Automation</ExternalLink>
     . You describe a workflow in plain language and AI helps you build it.
   </>,
   <>
