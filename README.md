@@ -1,6 +1,8 @@
 # Portfolio
 
-Personal portfolio showcasing projects and side builds. Currently a work-in-progress placeholder.
+Personal portfolio showcasing projects and side builds: a single page of bio, work, and projects on a dotted-notebook background.
+
+Page copy lives in `src/content.tsx`. The dot grid and cursor spotlight are tuned with CSS variables (`--dot-*`, `--spot-*`) in `src/index.css`.
 
 Built with React, TypeScript, and Vite. Uses [Bun](https://bun.sh) as the package manager and script runner.
 
