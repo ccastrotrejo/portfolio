@@ -16,16 +16,16 @@ export const ext = { target: '_blank', rel: 'noopener noreferrer' } as const
 
 export const bio: ReactNode[] = [
   <>
-    I’m a software engineer at{' '}
-    <a href="https://azure.microsoft.com/products/logic-apps" {...ext}>Microsoft</a> in Brooklyn,
-    where I’m the founding frontend engineer on Azure Logic Apps Automation, a new
-    AI&#8209;powered platform for building workflows in plain language.
+    I’m a software engineer at Microsoft in Brooklyn and the founding frontend engineer on{' '}
+    <a href="https://azure.microsoft.com/products/logic-apps" {...ext}>
+      Azure Logic Apps Automation
+    </a>
+    . You describe a workflow in plain language and AI helps you build it.
   </>,
   <>
-    I care about interfaces that feel fast and work for everyone: streaming UI for long-running
-    agents, performance budgets, and accessibility. Before New York I spent two years in Redmond on
-    the Logic Apps designer and its VS Code extension, and before that I started out at BlueOptima
-    in Guadalajara.
+    Most of my time lately goes into streaming UI for AI agents that run for minutes at a time,
+    which is harder to design for than it sounds. Before New York I spent two and a half years in Redmond on the
+    Logic Apps designer and its VS Code extension. I started out at BlueOptima in Guadalajara.
   </>,
   <>
     I studied computer science at Tec de Monterrey in Cuernavaca, Mexico. Outside work I build
@@ -46,7 +46,7 @@ export const work: Role[] = [
     company: 'Microsoft',
     title: 'Software Engineer II, Frontend',
     period: 'Sep 2024 – Present',
-    summary: 'Founding frontend engineer on Azure Logic Apps Automation, built from 0 → 1',
+    summary: 'Started the Azure Logic Apps Automation frontend from an empty repo',
   },
   {
     company: 'Microsoft',
@@ -86,7 +86,7 @@ export const projects: Project[] = [
   {
     name: 'Health Dashboard',
     blurb:
-      'A self-hosted training and recovery dashboard for Whoop, Strava, and Garmin. Your data stays on your machine.',
+      'A self-hosted dashboard for recovery, sleep, and training data from Whoop, Strava, and Garmin.',
     href: 'https://github.com/ccastrotrejo/HealthDashboardPublic',
     kind: 'Open source',
   },

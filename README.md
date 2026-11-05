@@ -1,6 +1,6 @@
 # Portfolio
 
-Personal portfolio showcasing projects and side builds: a single page of bio, work, and projects on a dotted-notebook background.
+My personal site: one page with a bio, work history, and side projects on a dotted-notebook background.
 
 Page copy lives in `src/content.tsx`. The dot grid and cursor spotlight are tuned with CSS variables (`--dot-*`, `--spot-*`) in `src/index.css`.
 
