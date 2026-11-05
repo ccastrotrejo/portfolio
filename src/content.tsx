@@ -16,9 +16,9 @@ export const ext = { target: '_blank', rel: 'noopener noreferrer' } as const
 
 export const bio: ReactNode[] = [
   <>
-    I’m a frontend engineer at{' '}
+    I’m a software engineer at{' '}
     <a href="https://azure.microsoft.com/products/logic-apps" {...ext}>Microsoft</a> in Brooklyn,
-    where I was the founding frontend engineer on Azure Logic Apps Automation, a new
+    where I’m the founding frontend engineer on Azure Logic Apps Automation, a new
     AI&#8209;powered platform for building workflows in plain language.
   </>,
   <>
