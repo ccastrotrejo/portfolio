@@ -96,6 +96,19 @@ body {
   mask-image: var(--spot);
 }
 
+/* Narrow screens have no side margins, so dots show in bands above the name and below the footer. */
+@media (max-width: 816px) {
+  .dot-field {
+    --clearing: linear-gradient(
+      to bottom,
+      #000 0,
+      transparent 96px,
+      transparent calc(100% - 120px),
+      #000 100%
+    );
+  }
+}
+
 .dot-field[data-pointer] .dot-field__spot {
   opacity: 1;
 }
@@ -178,6 +191,26 @@ body {
   border-radius: 2px;
 }
 
+.site a.site__row:focus-visible {
+  border-radius: 6px;
+}
+
+/* Off-site text links get a quiet arrow; rows render their own. */
+.site a[target='_blank']:not(.site__row)::after {
+  content: '\2197' / '';
+  display: inline-block;
+  margin-inline-start: 2px;
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+.site__arrow {
+  margin-inline-start: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
 .site__heading {
   margin-bottom: 12px;
   font-size: 15px;
@@ -232,7 +265,7 @@ body {
   }
 
   .site__list--links:hover .site__row--link {
-    opacity: 0.55;
+    opacity: 0.7;
   }
 
   .site__list--links:hover .site__row--link:hover {
@@ -250,6 +283,13 @@ body {
 
 .site__time {
   font-variant-numeric: tabular-nums;
+}
+
+/* Grow the contact links to 44px tall without moving the layout. */
+.site__footer a {
+  display: inline-block;
+  padding-block: 14px;
+  margin-block: -14px;
 }
 
 @media (max-width: 520px) {

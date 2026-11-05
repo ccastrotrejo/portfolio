@@ -50,7 +50,12 @@ export function App() {
               <li key={p.name}>
                 <a className="site__row site__row--link" href={p.href} {...ext}>
                   <div>
-                    <p className="site__row-title">{p.name}</p>
+                    <p className="site__row-title">
+                      {p.name}
+                      <span className="site__arrow" aria-hidden="true">
+                        ↗
+                      </span>
+                    </p>
                     <p className="site__row-blurb">{p.blurb}</p>
                   </div>
                   <span className="site__row-meta">{p.kind}</span>
@@ -71,7 +76,8 @@ export function App() {
               </span>
             ))}
           </p>
-          <p className="site__time">
+          {/* Prerendered at build time, so the minute differs on hydration. */}
+          <p className="site__time" suppressHydrationWarning>
             {time} in {person.city}
           </p>
         </footer>
