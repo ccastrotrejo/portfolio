@@ -211,10 +211,10 @@ body {
   border-radius: 2px;
 }
 
-/* Off-site links get a quiet arrow. */
+/* Off-site links get a quiet arrow. Inline, not inline-block: an atomic box would let
+   the line break between the arrow and punctuation that follows the link. */
 .site a[target='_blank']::after {
   content: '\2197' / '';
-  display: inline-block;
   margin-inline-start: 2px;
   color: var(--color-text-muted);
   font-size: 0.85em;
