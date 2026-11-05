@@ -17,7 +17,7 @@ export const ext = { target: '_blank', rel: 'noopener noreferrer' } as const
 export const bio: ReactNode[] = [
   <>
     I’m a software engineer at Microsoft in Brooklyn and the founding frontend engineer on{' '}
-    <a href="https://azure.microsoft.com/products/logic-apps" {...ext}>
+    <a href="https://auto.azure.com/" {...ext}>
       Azure Logic Apps Automation
     </a>
     . You describe a workflow in plain language and AI helps you build it.
