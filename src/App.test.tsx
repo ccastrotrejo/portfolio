@@ -32,6 +32,16 @@ describe('App', () => {
     }
   })
 
+  it('lists A4 Furniture Planner in Building', () => {
+    render(<App />)
+    const building = screen.getByRole('region', { name: 'Building' })
+    const link = within(building).getByRole('link', {
+      name: /^A4 Furniture Planner\s?\(opens in new tab\)$/,
+    })
+    expect(link.getAttribute('href')).toBe('https://apartment-planner-rust.vercel.app/')
+    expect(link.closest('li')?.textContent).toContain('Open source')
+  })
+
   it('keeps the email link in the same tab', () => {
     render(<App />)
     const email = screen.getByRole('link', { name: 'Email' })

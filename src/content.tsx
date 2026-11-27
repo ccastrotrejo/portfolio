@@ -73,6 +73,13 @@ export interface Project {
 
 export const projects: Project[] = [
   {
+    name: 'A4 Furniture Planner',
+    blurb:
+      'A 3D apartment planner with drag-and-drop furniture and real-time clearance checks.',
+    href: 'https://apartment-planner-rust.vercel.app/',
+    kind: 'Open source',
+  },
+  {
     name: 'CitiVibe',
     blurb:
       'A miniature New York to leave running on a second screen: traffic, weather, and 328 people going about their day.',
